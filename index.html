@@ -5,65 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PadelMap BA – Encuentra tu próxima cancha</title>
 
-  <!-- Tailwind CSS + FontAwesome -->
+  <!-- Tailwind CDN & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 
-  <!-- Leaflet + MarkerCluster -->
+  <!-- Leaflet & MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-  <!-- Sheet‑JS (Excel) -->
+  <!-- Sheet‑JS (client‑side Excel) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    /* Root & Utility */
-    :root{ --grad-1:#667eea; --grad-2:#764ba2; --accent:#4ecdc4; --danger:#e53935; --primary:#43cea2; --primary‑2:#185a9d; --warn:#ff6b6b; }
-    *{ box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --grad-1:#667eea; --grad-2:#764ba2; --accent:#4ecdc4; --danger:#e53935;
+      --primary:#43cea2; --primary-2:#185a9d; --warn:#ff6b6b;
+    }
+    *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
     body{ font-family:'Poppins',sans-serif; background:linear-gradient(135deg,var(--grad-1) 0%,var(--grad-2) 100%); min-height:100vh; overflow:hidden; }
 
     /* Layout */
     .app{ display:flex; height:100vh; }
     .sidebar{ width:380px; max-width:90vw; background:rgba(255,255,255,.95); backdrop-filter:blur(20px); padding:24px; overflow-y:auto; position:relative; transition:.3s; }
-    .sidebar.collapsed{ width:90px; padding:24px 12px; }
+    .sidebar.collapsed{ width:88px; padding:24px 12px; }
     .sidebar.collapsed .hide-on-collapse{ opacity:0; pointer-events:none; }
     .map-wrapper{ flex:1; position:relative; }
     #map{ width:100%; height:100%; }
 
-    /* Buttons */
-    .btn{ @apply w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition transform; }
+    /* Buttons (quick utility ‑ no Tailwind @apply here) */
+    .btn{ width:100%; padding:12px; border-radius:0.5rem; font-weight:600; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:transform .15s; }
     .btn:active{ transform:scale(.97); }
-    .btn‑primary{ background:linear-gradient(135deg,var(--primary),var(--primary‑2)); color:#fff; }
-    .btn‑primary:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(67,206,162,.5); }
-    .btn‑danger{ background:linear-gradient(135deg,#ff512f,#f09819); color:#fff; }
-    .btn‑danger:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(255,81,47,.5); }
+    .btn-primary{ background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#fff; }
+    .btn-primary:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(67,206,162,.4); }
+    .btn-danger{ background:linear-gradient(135deg,#ff512f,#f09819); color:#fff; }
+    .btn-danger:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(255,81,47,.4); }
 
-    /* Toggle */
-    .toggle{ position:absolute; top:20px; right:-16px; width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--grad-1),var(--grad-2)); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1001; transition:.3s; }
+    /* Sidebar toggle */
+    .toggle{ position:absolute; top:20px; right:-16px; width:34px; height:34px; border:none; border-radius:50%; background:linear-gradient(135deg,var(--grad-1),var(--grad-2)); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1001; transition:.3s; }
     .sidebar.collapsed .toggle{ transform:rotate(180deg); }
 
     /* Loader */
-    #loader{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.6); z-index:1002; backdrop-filter:blur(4px); }
-    #loader::before{ content:""; width:48px; height:48px; border-radius:50%; border:5px solid var(--accent); border-top-color:transparent; animation:spin 1s linear infinite; }
-    @keyframes spin{ to{ transform:rotate(360deg);} }
+    #loader{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.65); backdrop-filter:blur(4px); z-index:1002; }
+    #loader::before{ content:""; width:46px; height:46px; border-radius:50%; border:5px solid var(--accent); border-top-color:transparent; animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
 
     /* Overlay & Card */
     #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); opacity:0; visibility:hidden; transition:.3s; z-index:1100; }
     #overlay.show{ opacity:1; visibility:visible; }
-    #card{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.5); background:rgba(255,255,255,.95); backdrop-filter:blur(20px); width:94%; max-width:540px; max-height:90vh; overflow-y:auto; border-radius:24px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.25); z-index:1101; transition:.35s cubic-bezier(.175,.885,.32,1.275); }
+    #card{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.6); width:94%; max-width:540px; max-height:90vh; overflow-y:auto; background:rgba(255,255,255,.95); backdrop-filter:blur(20px); border-radius:24px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.25); transition:.35s cubic-bezier(.175,.885,.32,1.275); z-index:1101; }
     #card.show{ transform:translate(-50%,-50%) scale(1); }
 
-    /* Map markers */
-    .pulse{ animation:pulse 2s infinite; }
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
-
     /* Mobile */
-    @media(max-width:768px){ .sidebar{ position:absolute; left:-100%; top:0; height:100%; border-radius:0; } .sidebar.show{ left:0; } .mobile‑btn{ position:absolute; top:20px; left:20px; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; z-index:1003; } }
+    @media(max-width:768px){
+      .sidebar{ position:absolute; left:-100%; top:0; height:100%; border-radius:0; }
+      .sidebar.show{ left:0; }
+      .mobile-btn{ position:absolute; top:20px; left:20px; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; z-index:1003; }
+    }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Sidebar -->
+    <!-- ────────────── SIDEBAR ────────────── -->
     <aside id="sidebar" class="sidebar">
       <button class="toggle hidden md:flex" onclick="toggleSidebar()"><i class="fas fa-angle-left"></i></button>
 
@@ -79,13 +81,13 @@
         <!-- LOCALIDAD -->
         <div class="mb-6">
           <label class="block text-sm font-semibold text-gray-600 mb-1"><i class="fas fa-location-dot mr-1"></i>Localidad</label>
-          <input id="localitySearch" list="localities" placeholder="Buscar localidad…" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" oninput="applyFilters()" />
+          <input id="localitySearch" list="localities" placeholder="Buscar localidad…" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" oninput="applyFilters()">
           <datalist id="localities"></datalist>
         </div>
 
         <!-- ACTIONS -->
-        <button id="btnLoc" class="btn btn‑primary mb-3" onclick="getCurrentLocation()"><i class="fas fa-location-crosshairs"></i>Mi ubicación</button>
-        <button class="btn btn‑danger mb-8" onclick="resetFilters()"><i class="fas fa-arrows-rotate"></i>Limpiar filtros</button>
+        <button id="btnLoc" class="btn btn-primary mb-3" onclick="getCurrentLocation()"><i class="fas fa-location-crosshairs"></i>Mi ubicación</button>
+        <button class="btn btn-danger mb-8" onclick="resetFilters()"><i class="fas fa-arrows-rotate"></i>Limpiar filtros</button>
 
         <!-- STATS -->
         <div class="text-center bg-white bg-opacity-70 rounded-xl py-4 mb-6">
@@ -101,117 +103,124 @@
       </div>
     </aside>
 
-    <!-- Map wrapper -->
+    <!-- ────────────── MAP WRAPPER ────────────── -->
     <div class="map-wrapper">
-      <button class="mobile‑btn md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <button class="mobile-btn md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
       <div id="map"></div>
       <div id="loader"></div>
     </div>
   </div>
 
-  <!-- Info card -->
+  <!-- Info Card & Overlay -->
   <div id="overlay" onclick="closeCard()"></div>
   <article id="card"></article>
 
-  <!-- Leaflet scripts -->
+  <!-- Scripts: Leaflet + MarkerCluster -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
   <script>
-    /* ───────────────────────── Config ───────────────────────── */
-    const EXCEL_URL = 'PadelGeo.xlsx';
+    /* ───────────────── CONFIG & STATE ───────────────── */
+    const EXCEL_URL   = 'PadelGeo.xlsx';
+    const DANGER_COLOR = '#e53935';
     const ZONE_COLORS = { 'CABA':'#ff6b6b', 'GBA Norte':'#4ecdc4', 'GBA Sur':'#ffd166', 'GBA Oeste':'#118ab2' };
 
-    /* ───────────────────────── State */
-    let courts = [], filtered = []; let map, clusters, userLoc = null, userMarker = null;
+    let courts = [], filtered = [];
+    let map, clusters, userLoc = null, userMarker = null;
 
-    /* ───────────────────────── Helpers */
-    const key = s => s.toLowerCase().replace(/\s+/g,'');
-    function find(row, ...variants){ for(const k in row){ if(variants.some(v=>key(k)===key(v))) return row[k]; } return ''; }
+    /* ───────────────── HELPERS ───────────────── */
+    const norm = s => String(s).toLowerCase().replace(/\s+/g,'');
+    const pick = (row, ...aliases) => {
+      for (const k in row) if (aliases.some(a => norm(a) === norm(k))) return row[k];
+      return '';
+    };
 
-    /* Haversine */
-    function dist(a,b){ const R=6371; const dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180; const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2; return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s)); }
+    // Haversine distance (km)
+    const distKm = (a,b) => {
+      const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+      const s=Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+      return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
+    };
 
-    /* ───────────────────────── Excel */
+    /* ───────────────── LOAD EXCEL ───────────────── */
     async function loadExcel(){
-      const res = await fetch(EXCEL_URL); if(!res.ok) throw new Error('No se pudo descargar el Excel');
-      const wb = XLSX.read(await res.arrayBuffer(), {type:'array'});
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet,{defval:''});
+      const res = await fetch(EXCEL_URL);
+      if(!res.ok) throw new Error('No se pudo descargar el Excel');
+      const wb = XLSX.read(await res.arrayBuffer(),{type:'array'});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
       return rows.map(r=>({
-        name: find(r,'nombre','nombrecancha','cancha','complejo')||'N/D',
-        address: find(r,'direccion','dirección','calle')||'N/D',
-        locality: find(r,'localidad','ciudad','poblacion')||'N/D',
-        zone: find(r,'zona','region','partido','area')||'N/D',
-        phone: find(r,'telefono','teléfono')||'',
-        instagram: find(r,'instagram')||'',
-        instagramUrl: find(r,'instagramurl','linkinstagram','urlinstagram')||'',
-        reservation: find(r,'linkreserva','reservalink','reservas')||'',
-        lat: parseFloat(find(r,'latitud','lat')),
-        lng: parseFloat(find(r,'longitud','lng','lon')),
-        image: find(r,'imagen','foto','image')||''
+        name:      pick(r,'nombre','nombrecancha','cancha','complejo')    || 'N/D',
+        address:   pick(r,'direccion','dirección','calle')               || 'N/D',
+        locality:  pick(r,'localidad','ciudad','poblacion')              || 'N/D',
+        zone:      pick(r,'zona','region','partido','area')              || 'N/D',
+        phone:     pick(r,'telefono','teléfono'),
+        instagram: pick(r,'instagram'),
+        instagramUrl: pick(r,'instagramurl','linkinstagram','urlinstagram'),
+        reservation:  pick(r,'linkreserva','reservalink','reservas'),
+        lat: parseFloat(pick(r,'latitud','lat')),
+        lng: parseFloat(pick(r,'longitud','lng','lon')),
+        image: pick(r,'imagen','foto','image')
       })).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
     }
 
-    /* ───────────────────────── Map */
+    /* ───────────────── MAP ───────────────── */
     function initMap(){
       map = L.map('map').setView([-34.6037,-58.3816],11);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap' }).addTo(map);
       clusters = L.markerClusterGroup();
       map.addLayer(clusters);
       renderMarkers();
     }
 
-    function createIcon(color){ return L.divIcon({ html:`<i class='fas fa-map-marker-alt' style='color:${color};font-size:24px'></i>`, className:'', iconSize:[24,24], iconAnchor:[12,24] }); }
+    const createIcon = color => L.divIcon({ html:`<i class='fas fa-map-marker-alt' style='color:${color};font-size:24px'></i>`, className:'', iconSize:[24,24], iconAnchor:[12,24] });
 
     function renderMarkers(){
       clusters.clearLayers();
-      filtered.forEach(c=>{
-        const marker=L.marker([c.lat,c.lng],{icon:createIcon(ZONE_COLORS[c.zone]||'#555')});
-        const pop=`<div class='text-center'><strong>${c.name}</strong><br><span class='text-xs'>${c.locality}</span><br><em>doble‑click para ver más</em></div>`;
-        marker.bindPopup(pop);
-        marker.on('dblclick',()=>openCard(c));
-        clusters.addLayer(marker);
+      filtered.forEach(c => {
+        const m = L.marker([c.lat,c.lng],{ icon:createIcon(ZONE_COLORS[c.zone]||'#555') });
+        m.bindPopup(`<div class='text-center'><strong>${c.name}</strong><br><span class='text-xs'>${c.locality}</span><br><em>doble‑clic para más info</em></div>`);
+        m.on('dblclick',()=>openCard(c));
+        clusters.addLayer(m);
       });
-      document.getElementById('count').textContent=filtered.length;
+      document.getElementById('count').textContent = filtered.length;
       if(userLoc) updateNearest();
     }
 
-    /* ───────────────────────── UI filters */
+    /* ───────────────── FILTERS ───────────────── */
     function buildFilters(){
       const zones=[...new Set(courts.map(c=>c.zone))].sort();
-      zoneSelect.innerHTML='<option value="">Todas las zonas</option>'+zones.map(z=>`<option value="${z}">${z}</option>`).join('');
+      zoneSelect.innerHTML = '<option value="">Todas las zonas</option>' + zones.map(z=>`<option value="${z}">${z}</option>`).join('');
       const locs=[...new Set(courts.map(c=>c.locality))].sort();
-      localities.innerHTML=locs.map(l=>`<option value="${l}">`).join('');
+      localities.innerHTML = locs.map(l=>`<option value="${l}">`).join('');
     }
 
     function applyFilters(){
-      const z=zoneSelect.value, loc=localitySearch.value.trim().toLowerCase();
-      filtered=courts.filter(c=>(!z||c.zone===z)&&(!loc||c.locality.toLowerCase().includes(loc)));
+      const z = zoneSelect.value, loc = localitySearch.value.trim().toLowerCase();
+      filtered = courts.filter(c => (!z||c.zone===z) && (!loc || c.locality.toLowerCase().includes(loc)) );
       renderMarkers();
     }
 
     function resetFilters(){ zoneSelect.value=''; localitySearch.value=''; filtered=[...courts]; renderMarkers(); }
 
-    /* ───────────────────────── User location */
+    /* ───────────────── USER LOCATION ───────────────── */
     function getCurrentLocation(){
-      if(!navigator.geolocation) return alert('Geoloc no soportada');
-      navigator.geolocation.getCurrentPosition(p=>{
-        userLoc={lat:p.coords.latitude,lng:p.coords.longitude};
+      if(!navigator.geolocation) return alert('Geolocalización no soportada');
+      navigator.geolocation.getCurrentPosition(pos=>{
+        userLoc = { lat:pos.coords.latitude, lng:pos.coords.longitude };
         showUserMarker();
         map.setView([userLoc.lat,userLoc.lng],13);
         updateNearest();
-      },e=>alert('Error: '+e.message));
+      },err=>alert('Error al obtener ubicación: '+err.message));
     }
 
     function showUserMarker(){
       if(userMarker) map.removeLayer(userMarker);
-      userMarker=L.marker([userLoc.lat,userLoc.lng],{icon:createIcon(var(--danger))}).bindPopup('Tu ubicación').addTo(map).openPopup();
+      userMarker = L.marker([userLoc.lat,userLoc.lng],{ icon:createIcon(DANGER_COLOR) }).bindPopup('Tu ubicación').addTo(map).openPopup();
     }
 
     function updateNearest(){
-      const list=filtered.map(c=>({...c,d:dist(userLoc,c)})).sort((a,b)=>a.d-b.d).slice(0,3);
-      nearest.innerHTML=list.map(c=>`<div class='bg-white bg-opacity-70 rounded-lg p-3 cursor-pointer hover:bg-opacity-90' onclick='map.setView([${c.lat},${c.lng}],15); openCard(${JSON.stringify(c).replace(/"/g,'&quot;')})'>
+      const list = filtered.map(c=>({...c,d:distKm(userLoc,c)})).sort((a,b)=>a.d-b.d).slice(0,3);
+      nearest.innerHTML = list.map(c=>`<div class='bg-white bg-opacity-70 rounded-lg p-3 cursor-pointer hover:bg-opacity-90' onclick="map.setView([${c.lat},${c.lng}],15); openCard(${JSON.stringify(c).replace(/\"/g,'&quot;')})">
         <p class='font-semibold text-gray-800 text-sm'>${c.name}</p>
         <p class='text-gray-600 text-xs'>${c.locality}</p>
         <p class='text-accent font-medium text-xs'>${c.d.toFixed(2)} km</p>
@@ -219,36 +228,46 @@
       nearestBox.classList.remove('hidden');
     }
 
-    /* ───────────────────────── Card */
+    /* ───────────────── CARD ───────────────── */
     function openCard(c){
       overlay.classList.add('show');
       card.classList.add('show');
-      const phone=c.phone?`<li class='flex items-start gap-2'><i class='fas fa-phone text-accent mt-1'></i><span><strong>Teléfono:</strong> <a href='tel:${c.phone}' class='text-primary-600'>${c.phone}</a></span></li>`:'';
-      const distTxt=userLoc?`<li class='flex items-start gap-2'><i class='fas fa-route text-accent mt-1'></i><span><strong>Distancia:</strong> ${dist(userLoc,c).toFixed(2)} km</span></li>`:'';
-      card.innerHTML=`<button class='absolute top-4 right-4 w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center' onclick='closeCard()'><i class='fas fa-times'></i></button>
+      const phone   = c.phone ? `<li class='flex items-start gap-2'><i class='fas fa-phone text-accent mt-1'></i><span><strong>Teléfono:</strong> <a href='tel:${c.phone}' class='text-primary-600'>${c.phone}</a></span></li>` : '';
+      const distTag = userLoc ? `<li class='flex items-start gap-2'><i class='fas fa-route text-accent mt-1'></i><span><strong>Distancia:</strong> ${distKm(userLoc,c).toFixed(2)} km</span></li>` : '';
+      card.innerHTML = `
+        <button class='absolute top-4 right-4 w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center' onclick='closeCard()'><i class='fas fa-times'></i></button>
         <h2 class='text-2xl font-bold text-center mb-1'>${c.name}</h2>
         <p class='text-center text-accent mb-4'>${c.zone}</p>
         <ul class='space-y-2 text-sm mb-4'>
           <li class='flex items-start gap-2'><i class='fas fa-map-marker-alt text-accent mt-1'></i><span><strong>Dirección:</strong> ${c.address}</span></li>
           <li class='flex items-start gap-2'><i class='fas fa-city text-accent mt-1'></i><span><strong>Localidad:</strong> ${c.locality}</span></li>
           ${phone}
-          ${c.instagram?`<li class='flex items-start gap-2'><i class='fab fa-instagram text-accent mt-1'></i><span><strong>Instagram:</strong> <a href='${c.instagramUrl||'#'}' target='_blank' class='text-primary-600'>${c.instagram}</a></span></li>`:''}
-          ${c.reservation?`<li class='flex items-start gap-2'><i class='fas fa-calendar-check text-accent mt-1'></i><span><strong>Reservas:</strong> <a href='${c.reservation}' target='_blank' class='text-primary-600 font-semibold'>Reservar</a></span></li>`:''}
-          ${distTxt}
+          ${c.instagram ? `<li class='flex items-start gap-2'><i class='fab fa-instagram text-accent mt-1'></i><span><strong>Instagram:</strong> <a href='${c.instagramUrl||'#'}' target='_blank' class='text-primary-600'>${c.instagram}</a></span></li>` : ''}
+          ${c.reservation ? `<li class='flex items-start gap-2'><i class='fas fa-calendar-check text-accent mt-1'></i><span><strong>Reservas:</strong> <a href='${c.reservation}' target='_blank' class='text-primary-600 font-semibold'>Reservar</a></span></li>` : ''}
+          ${distTag}
         </ul>
-        ${c.image?`<img src='${c.image}' alt='${c.name}' class='rounded-xl object-cover w-full max-h-64'>`:''}`;
+        ${c.image ? `<img src='${c.image}' alt='${c.name}' class='rounded-xl object-cover w-full max-h-64'>` : ''}`;
     }
     function closeCard(){ overlay.classList.remove('show'); card.classList.remove('show'); }
 
-    /* ───────────────────────── Sidebar toggle */
-    function toggleSidebar(){ const sb=sidebar; if(innerWidth<=768){ sb.classList.toggle('show'); }else{ sb.classList.toggle('collapsed'); } }
+    /* ───────────────── SIDEBAR TOGGLE ───────────────── */
+    function toggleSidebar(){ const sb = sidebar; if(innerWidth<=768){ sb.classList.toggle('show'); } else { sb.classList.toggle('collapsed'); } }
     addEventListener('resize',()=>{ if(innerWidth>768) sidebar.classList.remove('show'); });
 
-    /* ───────────────────────── Init */
-    (async ()=>{
-      try{
-        courts=await loadExcel(); filtered=[...courts]; buildFilters(); initMap(); document.getElementById('loader').style.display='none';
-      }catch(e){ alert('Error al cargar las canchas'); console.error(e);} })();
+    /* ───────────────── INIT ───────────────── */
+    (async () => {
+      try {
+        courts = await loadExcel();
+        filtered = [...courts];
+        buildFilters();
+        initMap();
+      } catch (err) {
+        console.error(err);
+        alert('Error al cargar las canchas');
+      } finally {
+        document.getElementById('loader').style.display = 'none';
+      }
+    })();
   </script>
 </body>
 </html>
