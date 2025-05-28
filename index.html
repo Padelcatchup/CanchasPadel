@@ -1,329 +1,254 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PadelMap BA – Encuentra tu próxima cancha</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PadelMap BA – Encuentra tu próxima cancha</title>
 
-    <!-- UI & Iconography -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <!-- Tailwind CSS + FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 
-    <!-- Leaflet & Plugins -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <!-- Leaflet + MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Sheet‑JS (Excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Sheet‑JS for client‑side Excel parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    /* Root & Utility */
+    :root{ --grad-1:#667eea; --grad-2:#764ba2; --accent:#4ecdc4; --danger:#e53935; --primary:#43cea2; --primary‑2:#185a9d; --warn:#ff6b6b; }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:'Poppins',sans-serif; background:linear-gradient(135deg,var(--grad-1) 0%,var(--grad-2) 100%); min-height:100vh; overflow:hidden; }
 
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; overflow: hidden; }
-        .app-container { display: flex; height: 100vh; position: relative; }
-        .sidebar { width: 360px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius: 0 20px 20px 0; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,.12); overflow-y: auto; z-index: 1000; transition: .3s; }
-        .sidebar.collapsed { width: 82px; padding: 24px 12px; }
-        .sidebar.collapsed .sidebar-content { opacity: 0; pointer-events: none; }
-        .sidebar.collapsed .toggle-btn { transform: rotate(180deg); }
-        .map-container { flex: 1; height: 100vh; position: relative; }
-        #map { width: 100%; height: 100%; }
-        .logo { background: linear-gradient(135deg, #ff6b6b, #4ecdc4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 28px; position: relative; }
-        .logo::after { content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 48px; height: 3px; background: linear-gradient(90deg, #ff6b6b, #4ecdc4); border-radius: 2px; }
-        .search-label { @apply block font-semibold text-gray-600 mb-2 text-sm; }
-        .search-input, .search-select { @apply w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 backdrop-blur border-2 border-transparent transition outline-none text-sm; }
-        .search-input:focus, .search-select:focus { @apply bg-opacity-95 border-teal-400 ring-0 transform -translate-y-0.5 shadow-lg; }
-        .btn { @apply flex items-center justify-center font-semibold py-3 px-4 rounded-lg transition gap-2; }
-        .btn-primary { background: linear-gradient(135deg, #4ecdc4, #44a08d); color: #fff; }
-        .btn-primary:hover { @apply -translate-y-0.5 shadow-xl; }
-        .btn-secondary { background: linear-gradient(135deg, #ff6b6b, #ff5722); color: #fff; }
-        .btn-secondary:hover { @apply -translate-y-0.5 shadow-xl; }
-        .toggle-btn { position: absolute; top: 20px; right: -15px; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border: none; cursor: pointer; z-index: 1100; transition: .3s; }
-        /* Info Card */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0; visibility: hidden; transition: .3s; z-index: 1999; }
-        .overlay.show { opacity: 1; visibility: visible; }
-        .info-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0); background: rgba(255,255,255,.95); backdrop-filter: blur(20px); border-radius: 20px; padding: 32px; width: 92%; max-width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); z-index: 2000; transition: .4s cubic-bezier(.175,.885,.32,1.275); }
-        .info-card.show { transform: translate(-50%,-50%) scale(1); }
-        .close-btn { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,107,107,.1); color: #ff6b6b; border: none; cursor: pointer; transition: .3s; }
-        .close-btn:hover { background: #ff6b6b; color: #fff; transform: rotate(90deg); }
-        .pulse-marker { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}100%{transform:scale(1);opacity:1} }
-        /* Loader */
-        .loader { @apply flex items-center justify-center h-full w-full bg-white bg-opacity-50 absolute inset-0 backdrop-blur z-50; }
-        .loader::before { content:""; @apply animate-spin rounded-full border-4 border-teal-400 border-t-transparent h-10 w-10; }
-        /* Responsive */
-        @media(max-width:768px){ .sidebar{ position:absolute;left:0;top:0;transform:translateX(-100%);border-radius:0;width:300px; } .sidebar.show{ transform:translateX(0); } .mobile-toggle{ position:absolute;top:20px;left:20px;background:rgba(255,255,255,.9);border:none;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;z-index:1600; box-shadow:0 4px 15px rgba(0,0,0,.25); } }
-    </style>
+    /* Layout */
+    .app{ display:flex; height:100vh; }
+    .sidebar{ width:380px; max-width:90vw; background:rgba(255,255,255,.95); backdrop-filter:blur(20px); padding:24px; overflow-y:auto; position:relative; transition:.3s; }
+    .sidebar.collapsed{ width:90px; padding:24px 12px; }
+    .sidebar.collapsed .hide-on-collapse{ opacity:0; pointer-events:none; }
+    .map-wrapper{ flex:1; position:relative; }
+    #map{ width:100%; height:100%; }
+
+    /* Buttons */
+    .btn{ @apply w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition transform; }
+    .btn:active{ transform:scale(.97); }
+    .btn‑primary{ background:linear-gradient(135deg,var(--primary),var(--primary‑2)); color:#fff; }
+    .btn‑primary:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(67,206,162,.5); }
+    .btn‑danger{ background:linear-gradient(135deg,#ff512f,#f09819); color:#fff; }
+    .btn‑danger:hover{ filter:brightness(1.05); box-shadow:0 4px 15px rgba(255,81,47,.5); }
+
+    /* Toggle */
+    .toggle{ position:absolute; top:20px; right:-16px; width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--grad-1),var(--grad-2)); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1001; transition:.3s; }
+    .sidebar.collapsed .toggle{ transform:rotate(180deg); }
+
+    /* Loader */
+    #loader{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.6); z-index:1002; backdrop-filter:blur(4px); }
+    #loader::before{ content:""; width:48px; height:48px; border-radius:50%; border:5px solid var(--accent); border-top-color:transparent; animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg);} }
+
+    /* Overlay & Card */
+    #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); opacity:0; visibility:hidden; transition:.3s; z-index:1100; }
+    #overlay.show{ opacity:1; visibility:visible; }
+    #card{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.5); background:rgba(255,255,255,.95); backdrop-filter:blur(20px); width:94%; max-width:540px; max-height:90vh; overflow-y:auto; border-radius:24px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.25); z-index:1101; transition:.35s cubic-bezier(.175,.885,.32,1.275); }
+    #card.show{ transform:translate(-50%,-50%) scale(1); }
+
+    /* Map markers */
+    .pulse{ animation:pulse 2s infinite; }
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+    /* Mobile */
+    @media(max-width:768px){ .sidebar{ position:absolute; left:-100%; top:0; height:100%; border-radius:0; } .sidebar.show{ left:0; } .mobile‑btn{ position:absolute; top:20px; left:20px; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; z-index:1003; } }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Mobile → Sidebar toggle -->
-        <button class="mobile-toggle md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <button class="toggle hidden md:flex" onclick="toggleSidebar()"><i class="fas fa-angle-left"></i></button>
 
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar">
-            <button class="toggle-btn hidden md:block" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
+      <div class="hide-on-collapse">
+        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-pink-500 to-teal-400 bg-clip-text text-transparent text-center mb-6"><i class="fas fa-table-tennis-paddle-ball mr-2"></i>PadelMap BA</h1>
 
-            <div class="sidebar-content">
-                <h1 class="logo"><i class="fas fa-map-marker-alt"></i> PadelMap&nbsp;BA</h1>
-
-                <!-- Filters -->
-                <div class="space-y-6">
-                    <!-- Zona -->
-                    <div>
-                        <label class="search-label"><i class="fas fa-globe-americas mr-2"></i>Zona</label>
-                        <select id="zoneSelect" class="search-select" onchange="applyFilters()"></select>
-                    </div>
-                    <!-- Localidad -->
-                    <div>
-                        <label class="search-label"><i class="fas fa-search mr-2"></i>Localidad</label>
-                        <input id="localitySearch" class="search-input" placeholder="Buscar localidad…" oninput="applyFilters()" list="localities" />
-                        <datalist id="localities"></datalist>
-                    </div>
-
-                    <!-- My location / Clear -->
-                    <button class="btn btn-primary w-full" onclick="getCurrentLocation()"><i class="fas fa-crosshairs"></i>Mi ubicación</button>
-                    <button class="btn btn-secondary w-full" onclick="resetFilters()"><i class="fas fa-refresh"></i>Limpiar filtros</button>
-                </div>
-
-                <!-- Stats -->
-                <div class="text-center mt-8 bg-white bg-opacity-70 rounded-xl py-4" id="statsBox">
-                    <span id="courtCount" class="text-3xl font-bold text-teal-400">0</span>
-                    <p class="text-sm text-gray-600 font-medium">Canchas disponibles</p>
-                </div>
-
-                <!-- Nearest courts -->
-                <section id="nearestCourts" class="mt-6 hidden">
-                    <h3 class="text-gray-700 mb-3 font-semibold"><i class="fas fa-location-arrow mr-2"></i>Canchas más cercanas</h3>
-                    <div id="nearestList" class="space-y-2"></div>
-                </section>
-            </div>
-        </aside>
-
-        <!-- Map -->
-        <div class="map-container">
-            <div id="map"></div>
-            <!-- Loader while Excel fetch/parse -->
-            <div id="loader" class="loader"></div>
+        <!-- ZONA -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-600 mb-1"><i class="fas fa-globe-americas mr-1"></i>Zona</label>
+          <select id="zoneSelect" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" onchange="applyFilters()"></select>
         </div>
+
+        <!-- LOCALIDAD -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-600 mb-1"><i class="fas fa-location-dot mr-1"></i>Localidad</label>
+          <input id="localitySearch" list="localities" placeholder="Buscar localidad…" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" oninput="applyFilters()" />
+          <datalist id="localities"></datalist>
+        </div>
+
+        <!-- ACTIONS -->
+        <button id="btnLoc" class="btn btn‑primary mb-3" onclick="getCurrentLocation()"><i class="fas fa-location-crosshairs"></i>Mi ubicación</button>
+        <button class="btn btn‑danger mb-8" onclick="resetFilters()"><i class="fas fa-arrows-rotate"></i>Limpiar filtros</button>
+
+        <!-- STATS -->
+        <div class="text-center bg-white bg-opacity-70 rounded-xl py-4 mb-6">
+          <span id="count" class="text-4xl font-extrabold text-accent">0</span>
+          <p class="text-sm text-gray-600 font-medium">Canchas disponibles</p>
+        </div>
+
+        <!-- NEAREST -->
+        <section id="nearestBox" class="hidden">
+          <h3 class="text-gray-700 font-semibold mb-3 flex items-center"><i class="fas fa-route mr-2"></i>Canchas más cercanas</h3>
+          <div id="nearest" class="space-y-3"></div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Map wrapper -->
+    <div class="map-wrapper">
+      <button class="mobile‑btn md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div id="map"></div>
+      <div id="loader"></div>
     </div>
+  </div>
 
-    <!-- Info card -->
-    <div id="overlay" class="overlay" onclick="closeInfoCard()"></div>
-    <article id="infoCard" class="info-card">
-        <button class="close-btn" onclick="closeInfoCard()"><i class="fas fa-times"></i></button>
-        <div id="cardContent"></div>
-    </article>
+  <!-- Info card -->
+  <div id="overlay" onclick="closeCard()"></div>
+  <article id="card"></article>
 
-    <!-- Scripts → Leaflet & Plugins -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-    <!-- App logic -->
-    <script>
-        /*────────────────────── GLOBAL STATE ──────────────────────*/
-        const EXCEL_URL = 'PadelGeo.xlsx'; // Ruta relativa en el repo GitHub
-        let padelCourts = [];              // Datos cargados desde Excel
-        let filteredCourts = [];           // Datos después de filtros UI
-        let map, markerLayer, userMarker, userLocation = null;
+  <script>
+    /* ───────────────────────── Config ───────────────────────── */
+    const EXCEL_URL = 'PadelGeo.xlsx';
+    const ZONE_COLORS = { 'CABA':'#ff6b6b', 'GBA Norte':'#4ecdc4', 'GBA Sur':'#ffd166', 'GBA Oeste':'#118ab2' };
 
-        /*────────────────────── INIT ──────────────────────────────*/
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                padelCourts = await fetchCourtsFromExcel(EXCEL_URL);
-                filteredCourts = [...padelCourts];
-                buildDynamicFilters();
-                initMap();
-                hideLoader();
-            } catch (err) {
-                console.error(err);
-                alert('Error al cargar las canchas. Verifique el archivo Excel.');
-            }
-        });
+    /* ───────────────────────── State */
+    let courts = [], filtered = []; let map, clusters, userLoc = null, userMarker = null;
 
-        function hideLoader() { document.getElementById('loader').style.display = 'none'; }
+    /* ───────────────────────── Helpers */
+    const key = s => s.toLowerCase().replace(/\s+/g,'');
+    function find(row, ...variants){ for(const k in row){ if(variants.some(v=>key(k)===key(v))) return row[k]; } return ''; }
 
-        /*─────────────────── EXCEL LOAD ──────────────────────────*/
-        async function fetchCourtsFromExcel(url) {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('No se pudo descargar el Excel');
-            const arrayBuffer = await res.arrayBuffer();
-            const wb = XLSX.read(arrayBuffer, { type: 'array' });
-            const sheet = wb.Sheets[wb.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-            // Normaliza claves para compatibilidad
-            return rows.map(r => ({
-                name: r.Nombre || r.name,
-                address: r.Direccion || r.address,
-                locality: r.Localidad || r.locality,
-                zone: r.Zona || r.zone,
-                phone: r.Telefono || r.phone || 'No especificado',
-                instagram: r.Instagram || r.instagram,
-                instagramUrl: r.InstagramURL || r.instagramUrl,
-                reservationLink: r.LinkReserva || r.reservationLink || 'No especificado',
-                lat: Number(r.Latitud || r.lat),
-                lng: Number(r.Longitud || r.lng),
-                image: r.Imagen || r.image || ''
-            })).filter(c => !isNaN(c.lat) && !isNaN(c.lng));
-        }
+    /* Haversine */
+    function dist(a,b){ const R=6371; const dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180; const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2; return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s)); }
 
-        /*─────────────────── MAP ─────────────────────────────────*/
-        function initMap() {
-            map = L.map('map').setView([-34.6037, -58.3816], 11);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+    /* ───────────────────────── Excel */
+    async function loadExcel(){
+      const res = await fetch(EXCEL_URL); if(!res.ok) throw new Error('No se pudo descargar el Excel');
+      const wb = XLSX.read(await res.arrayBuffer(), {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet,{defval:''});
+      return rows.map(r=>({
+        name: find(r,'nombre','nombrecancha','cancha','complejo')||'N/D',
+        address: find(r,'direccion','dirección','calle')||'N/D',
+        locality: find(r,'localidad','ciudad','poblacion')||'N/D',
+        zone: find(r,'zona','region','partido','area')||'N/D',
+        phone: find(r,'telefono','teléfono')||'',
+        instagram: find(r,'instagram')||'',
+        instagramUrl: find(r,'instagramurl','linkinstagram','urlinstagram')||'',
+        reservation: find(r,'linkreserva','reservalink','reservas')||'',
+        lat: parseFloat(find(r,'latitud','lat')),
+        lng: parseFloat(find(r,'longitud','lng','lon')),
+        image: find(r,'imagen','foto','image')||''
+      })).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
+    }
 
-            markerLayer = L.markerClusterGroup();
-            map.addLayer(markerLayer);
-            renderMarkers();
-        }
+    /* ───────────────────────── Map */
+    function initMap(){
+      map = L.map('map').setView([-34.6037,-58.3816],11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+      clusters = L.markerClusterGroup();
+      map.addLayer(clusters);
+      renderMarkers();
+    }
 
-        function renderMarkers() {
-            markerLayer.clearLayers();
-            filteredCourts.forEach(court => {
-                const icon = L.divIcon({
-                    html: `<i class="fas fa-circle" style="color:${zoneColor(court.zone)};font-size:18px;"></i>`,
-                    className: 'relative', iconSize: [18, 18], iconAnchor: [9, 9]
-                });
+    function createIcon(color){ return L.divIcon({ html:`<i class='fas fa-map-marker-alt' style='color:${color};font-size:24px'></i>`, className:'', iconSize:[24,24], iconAnchor:[12,24] }); }
 
-                const marker = L.marker([court.lat, court.lng], { icon })
-                    .bindPopup(`<div class="text-center p-2">
-                        <h3 class="font-semibold text-gray-800 mb-1">${court.name}</h3>
-                        <p class="text-gray-600 text-xs">${court.locality}, ${court.zone}</p>
-                        <p class="text-teal-500 text-xs">Doble clic para más info</p>
-                    </div>`);
-                marker.on('dblclick', () => showInfoCard(court));
-                markerLayer.addLayer(marker);
-            });
-            updateCourtCount();
-        }
+    function renderMarkers(){
+      clusters.clearLayers();
+      filtered.forEach(c=>{
+        const marker=L.marker([c.lat,c.lng],{icon:createIcon(ZONE_COLORS[c.zone]||'#555')});
+        const pop=`<div class='text-center'><strong>${c.name}</strong><br><span class='text-xs'>${c.locality}</span><br><em>doble‑click para ver más</em></div>`;
+        marker.bindPopup(pop);
+        marker.on('dblclick',()=>openCard(c));
+        clusters.addLayer(marker);
+      });
+      document.getElementById('count').textContent=filtered.length;
+      if(userLoc) updateNearest();
+    }
 
-        function zoneColor(zone) {
-            const palette = {
-                'CABA':'#ff6b6b', 'GBA Norte':'#4ecdc4', 'GBA Sur':'#ffd166', 'GBA Oeste':'#118ab2'
-            };
-            return palette[zone] || '#888';
-        }
+    /* ───────────────────────── UI filters */
+    function buildFilters(){
+      const zones=[...new Set(courts.map(c=>c.zone))].sort();
+      zoneSelect.innerHTML='<option value="">Todas las zonas</option>'+zones.map(z=>`<option value="${z}">${z}</option>`).join('');
+      const locs=[...new Set(courts.map(c=>c.locality))].sort();
+      localities.innerHTML=locs.map(l=>`<option value="${l}">`).join('');
+    }
 
-        /*─────────────────── INFO CARD ───────────────────────────*/
-        function showInfoCard(court) {
-            const overlay = document.getElementById('overlay');
-            const card = document.getElementById('infoCard');
-            const content = document.getElementById('cardContent');
+    function applyFilters(){
+      const z=zoneSelect.value, loc=localitySearch.value.trim().toLowerCase();
+      filtered=courts.filter(c=>(!z||c.zone===z)&&(!loc||c.locality.toLowerCase().includes(loc)));
+      renderMarkers();
+    }
 
-            const phone = court.phone !== 'No especificado' ? `<a href="tel:${court.phone}" class="text-teal-500">${court.phone}</a>` : 'No especificado';
-            const ig = court.instagram && court.instagramUrl ? `<a href="${court.instagramUrl}" target="_blank" class="text-teal-500">${court.instagram}</a>` : (court.instagram||'No especificado');
-            const reserve = court.reservationLink !== 'No especificado' ? `<a href="${court.reservationLink}" target="_blank" class="text-teal-500 font-semibold">Reservar</a>` : 'No disponible';
-            const dist = userLocation ? `${calcDist(userLocation, court).toFixed(2)} km` : '';
+    function resetFilters(){ zoneSelect.value=''; localitySearch.value=''; filtered=[...courts]; renderMarkers(); }
 
-            content.innerHTML = `
-                <header class="text-center mb-6 border-b pb-4">
-                    <h2 class="text-xl font-bold text-gray-800">${court.name}</h2>
-                    <p class="text-teal-500 font-medium text-sm">${court.zone}</p>
-                </header>
-                <ul class="space-y-3">
-                    <li class="flex items-start gap-3"><i class="fas fa-map-marker-alt text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Dirección</p><p class="text-gray-800 text-sm">${court.address}</p></div></li>
-                    <li class="flex items-start gap-3"><i class="fas fa-city text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Localidad</p><p class="text-gray-800 text-sm">${court.locality}</p></div></li>
-                    <li class="flex items-start gap-3"><i class="fas fa-phone text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Teléfono</p><p class="text-gray-800 text-sm">${phone}</p></div></li>
-                    <li class="flex items-start gap-3"><i class="fab fa-instagram text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Instagram</p><p class="text-gray-800 text-sm">${ig}</p></div></li>
-                    <li class="flex items-start gap-3"><i class="fas fa-calendar-check text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Reservas</p><p class="text-gray-800 text-sm">${reserve}</p></div></li>
-                    ${dist && `<li class="flex items-start gap-3"><i class="fas fa-route text-teal-500 mt-1"></i><div><p class="font-medium text-gray-700 text-sm">Distancia</p><p class="text-gray-800 text-sm">${dist}</p></div></li>`}
-                </ul>
-                ${court.image ? `<img src="${court.image}" alt="${court.name}" class="rounded-xl mt-6 w-full object-cover">` : ''}
-            `;
+    /* ───────────────────────── User location */
+    function getCurrentLocation(){
+      if(!navigator.geolocation) return alert('Geoloc no soportada');
+      navigator.geolocation.getCurrentPosition(p=>{
+        userLoc={lat:p.coords.latitude,lng:p.coords.longitude};
+        showUserMarker();
+        map.setView([userLoc.lat,userLoc.lng],13);
+        updateNearest();
+      },e=>alert('Error: '+e.message));
+    }
 
-            overlay.classList.add('show');
-            card.classList.add('show');
-        }
+    function showUserMarker(){
+      if(userMarker) map.removeLayer(userMarker);
+      userMarker=L.marker([userLoc.lat,userLoc.lng],{icon:createIcon(var(--danger))}).bindPopup('Tu ubicación').addTo(map).openPopup();
+    }
 
-        function closeInfoCard() {
-            document.getElementById('overlay').classList.remove('show');
-            document.getElementById('infoCard').classList.remove('show');
-        }
+    function updateNearest(){
+      const list=filtered.map(c=>({...c,d:dist(userLoc,c)})).sort((a,b)=>a.d-b.d).slice(0,3);
+      nearest.innerHTML=list.map(c=>`<div class='bg-white bg-opacity-70 rounded-lg p-3 cursor-pointer hover:bg-opacity-90' onclick='map.setView([${c.lat},${c.lng}],15); openCard(${JSON.stringify(c).replace(/"/g,'&quot;')})'>
+        <p class='font-semibold text-gray-800 text-sm'>${c.name}</p>
+        <p class='text-gray-600 text-xs'>${c.locality}</p>
+        <p class='text-accent font-medium text-xs'>${c.d.toFixed(2)} km</p>
+      </div>`).join('');
+      nearestBox.classList.remove('hidden');
+    }
 
-        /*─────────────────── FILTERS ─────────────────────────────*/
-        function buildDynamicFilters() {
-            const zones = [...new Set(padelCourts.map(c => c.zone))].sort();
-            const zoneSelect = document.getElementById('zoneSelect');
-            zoneSelect.innerHTML = `<option value="">Todas las zonas</option>` + zones.map(z => `<option value="${z}">${z}</option>`).join('');
+    /* ───────────────────────── Card */
+    function openCard(c){
+      overlay.classList.add('show');
+      card.classList.add('show');
+      const phone=c.phone?`<li class='flex items-start gap-2'><i class='fas fa-phone text-accent mt-1'></i><span><strong>Teléfono:</strong> <a href='tel:${c.phone}' class='text-primary-600'>${c.phone}</a></span></li>`:'';
+      const distTxt=userLoc?`<li class='flex items-start gap-2'><i class='fas fa-route text-accent mt-1'></i><span><strong>Distancia:</strong> ${dist(userLoc,c).toFixed(2)} km</span></li>`:'';
+      card.innerHTML=`<button class='absolute top-4 right-4 w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center' onclick='closeCard()'><i class='fas fa-times'></i></button>
+        <h2 class='text-2xl font-bold text-center mb-1'>${c.name}</h2>
+        <p class='text-center text-accent mb-4'>${c.zone}</p>
+        <ul class='space-y-2 text-sm mb-4'>
+          <li class='flex items-start gap-2'><i class='fas fa-map-marker-alt text-accent mt-1'></i><span><strong>Dirección:</strong> ${c.address}</span></li>
+          <li class='flex items-start gap-2'><i class='fas fa-city text-accent mt-1'></i><span><strong>Localidad:</strong> ${c.locality}</span></li>
+          ${phone}
+          ${c.instagram?`<li class='flex items-start gap-2'><i class='fab fa-instagram text-accent mt-1'></i><span><strong>Instagram:</strong> <a href='${c.instagramUrl||'#'}' target='_blank' class='text-primary-600'>${c.instagram}</a></span></li>`:''}
+          ${c.reservation?`<li class='flex items-start gap-2'><i class='fas fa-calendar-check text-accent mt-1'></i><span><strong>Reservas:</strong> <a href='${c.reservation}' target='_blank' class='text-primary-600 font-semibold'>Reservar</a></span></li>`:''}
+          ${distTxt}
+        </ul>
+        ${c.image?`<img src='${c.image}' alt='${c.name}' class='rounded-xl object-cover w-full max-h-64'>`:''}`;
+    }
+    function closeCard(){ overlay.classList.remove('show'); card.classList.remove('show'); }
 
-            const localities = [...new Set(padelCourts.map(c => c.locality))].sort();
-            const datalist = document.getElementById('localities');
-            datalist.innerHTML = localities.map(l => `<option value="${l}"></option>`).join('');
-        }
+    /* ───────────────────────── Sidebar toggle */
+    function toggleSidebar(){ const sb=sidebar; if(innerWidth<=768){ sb.classList.toggle('show'); }else{ sb.classList.toggle('collapsed'); } }
+    addEventListener('resize',()=>{ if(innerWidth>768) sidebar.classList.remove('show'); });
 
-        function applyFilters() {
-            const zone = document.getElementById('zoneSelect').value;
-            const locText = document.getElementById('localitySearch').value.toLowerCase();
-            filteredCourts = padelCourts.filter(c => {
-                const zoneOk = zone ? c.zone === zone : true;
-                const locOk = locText ? c.locality.toLowerCase().includes(locText) : true;
-                return zoneOk && locOk;
-            });
-            renderMarkers();
-        }
-
-        function resetFilters() {
-            document.getElementById('zoneSelect').value = '';
-            document.getElementById('localitySearch').value = '';
-            filteredCourts = [...padelCourts];
-            renderMarkers();
-            hideNearestCourts();
-        }
-
-        /*─────────────────── USER LOCATION & NEAREST ───────────*/
-        function getCurrentLocation() {
-            if (!navigator.geolocation) return alert('Geolocalización no soportada');
-            navigator.geolocation.getCurrentPosition(pos => {
-                userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                showUserMarker();
-                centerOn(userLocation, 13);
-                showNearest();
-            }, err => alert('Error al obtener ubicación: '+err.message));
-        }
-
-        function showUserMarker() {
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: L.divIcon({ className:'pulse-marker', html:'<div style="background:#ff6b6b;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px rgba(255,107,107,.8);"></div>', iconSize:[20,20], iconAnchor:[10,10] }) }).bindPopup('Tu ubicación').addTo(map);
-        }
-
-        function centerOn({lat,lng}, zoom=15){ map.setView([lat,lng], zoom); }
-
-        function calcDist(a, b) { // haversine
-            const R=6371; const dLat=(b.lat-a.lat)*Math.PI/180; const dLng=(b.lng-a.lng)*Math.PI/180;
-            const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-            return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
-        }
-
-        function showNearest() {
-            if (!userLocation) return;
-            const sorted = filteredCourts.map(c => ({...c, dist: calcDist(userLocation,c)})).sort((a,b)=>a.dist-b.dist).slice(0,3);
-            const container = document.getElementById('nearestCourts');
-            const list = document.getElementById('nearestList');
-            list.innerHTML = sorted.map(c => `<div class="bg-white bg-opacity-70 rounded-lg p-3 cursor-pointer hover:bg-opacity-90" onclick='centerOn({lat:${c.lat},lng:${c.lng}}); showInfoCard(${JSON.stringify(c).replace(/"/g,'&quot;')})'>
-                <p class="font-semibold text-gray-800 text-sm">${c.name}</p>
-                <p class="text-gray-600 text-xs">${c.locality}</p>
-                <p class="text-teal-500 text-xs font-medium">${c.dist.toFixed(2)} km</p>
-            </div>`).join('');
-            container.classList.remove('hidden');
-        }
-
-        function hideNearestCourts(){ document.getElementById('nearestCourts').classList.add('hidden'); }
-
-        /*─────────────────── UTILS ─────────────────────────────*/
-        function updateCourtCount(){ document.getElementById('courtCount').textContent = filteredCourts.length; }
-
-        /*─────────────────── SIDEBAR ───────────────────────────*/
-        function toggleSidebar(){
-            const sb=document.getElementById('sidebar');
-            if(window.innerWidth<=768){ sb.classList.toggle('show'); } else { sb.classList.toggle('collapsed'); }
-        }
-
-        /* Adapt UI on resize – auto close mobile sidebar */
-        window.addEventListener('resize',()=>{ if(window.innerWidth>768) document.getElementById('sidebar').classList.remove('show'); });
-    </script>
+    /* ───────────────────────── Init */
+    (async ()=>{
+      try{
+        courts=await loadExcel(); filtered=[...courts]; buildFilters(); initMap(); document.getElementById('loader').style.display='none';
+      }catch(e){ alert('Error al cargar las canchas'); console.error(e);} })();
+  </script>
 </body>
 </html>
