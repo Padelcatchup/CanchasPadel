@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PadelMap BA – Encuentra tu próxima cancha</title>
+  <title>PadelMap BA — Encuentra tu próxima cancha</title>
 
-  <!-- Tailwind + FontAwesome -->
+  <!-- Tailwind & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 
-  <!-- Leaflet + MarkerCluster -->
+  <!-- Leaflet & MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
@@ -17,64 +17,54 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    :root{
-      --grad-1:#667eea; --grad-2:#764ba2; --accent:#00bfa6; --danger:#e53935;
-      --primary:#43cea2; --primary-2:#185a9d;
-    }
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Poppins',sans-serif;background:linear-gradient(135deg,var(--grad-1),var(--grad-2));min-height:100vh;overflow:hidden}
+    :root{--grad1:#667eea;--grad2:#764ba2;--accent:#00bfa6;--danger:#e53935;--primary:#43cea2;--primary2:#185a9d}
+    *,*:before,*:after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Poppins',sans-serif;background:linear-gradient(135deg,var(--grad1),var(--grad2));min-height:100vh;overflow:hidden}
     .app{display:flex;height:100vh}
-    .sidebar{width:380px;max-width:92vw;background:rgba(255,255,255,.94);backdrop-filter:blur(20px);padding:24px;overflow-y:auto;position:relative;transition:.3s}
+    .sidebar{width:380px;max-width:92vw;background:rgba(255,255,255,.95);backdrop-filter:blur(18px);padding:24px;overflow-y:auto;position:relative;transition:.3s}
     .sidebar.collapsed{width:90px;padding:24px 12px}
     .sidebar.collapsed .hide-on-collapse{opacity:0;pointer-events:none}
     .map-wrapper{flex:1;position:relative}
     #map{width:100%;height:100%}
-    .btn{width:100%;padding:12px;border-radius:10px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:transform .15s}
-    .btn:active{transform:scale(.97)}
-    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff}
-    .btn-primary:hover{filter:brightness(1.05);box-shadow:0 4px 15px rgba(67,206,162,.35)}
+    .btn{width:100%;padding:13px;border-radius:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:transform .15s}
+    .btn:active{transform:scale(.96)}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}
+    .btn-primary:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(67,206,162,.35)}
     .btn-danger{background:linear-gradient(135deg,#ff512f,#f09819);color:#fff}
-    .btn-danger:hover{filter:brightness(1.05);box-shadow:0 4px 15px rgba(255,81,47,.35)}
-    .toggle{position:absolute;top:20px;right:-16px;width:34px;height:34px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--grad-1),var(--grad-2));color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1001;transition:.3s}
+    .btn-danger:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(255,81,47,.35)}
+    .toggle{position:absolute;top:20px;right:-16px;width:40px;height:40px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--grad1),var(--grad2));color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1001;transition:.3s}
     .sidebar.collapsed .toggle{transform:rotate(180deg)}
-    #loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.65);backdrop-filter:blur(4px);z-index:1002}
-    #loader::before{content:"";width:46px;height:46px;border-radius:50%;border:5px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
+    #loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);z-index:1002}
+    #loader::before{content:"";width:48px;height:48px;border-radius:50%;border:6px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:.3s;z-index:1100}
     #overlay.show{opacity:1;visibility:visible}
-    #card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.55);width:92%;max-width:560px;max-height:92vh;overflow-y:auto;background:rgba(255,255,255,.97);backdrop-filter:blur(22px);border-radius:26px;padding:36px 32px 40px;box-shadow:0 20px 60px rgba(0,0,0,.28);transition:.35s cubic-bezier(.175,.885,.32,1.275);z-index:1101}
+    #card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.55);width:90%;max-width:580px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:28px;padding:40px 36px;box-shadow:0 24px 64px rgba(0,0,0,.3);transition:.35s cubic-bezier(.175,.885,.32,1.275);z-index:1101}
     #card.show{transform:translate(-50%,-50%) scale(1)}
-    @media(max-width:768px){.sidebar{position:absolute;left:-100%;top:0;height:100%;border-radius:0}.sidebar.show{left:0}.mobile-btn{position:absolute;top:20px;left:20px;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:1003}}
+    @media(max-width:768px){.sidebar{position:absolute;left:-100%;top:0;height:100%}.sidebar.show{left:0}.mobile-btn{position:absolute;top:20px;left:20px;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:1003}}
   </style>
 </head>
 <body>
 <div class="app">
-  <!-- ▀▀ Sidebar ▀▀ -->
   <aside id="sidebar" class="sidebar">
     <button class="toggle hidden md:flex" onclick="toggleSidebar()"><i class="fas fa-angle-left"></i></button>
-
     <div class="hide-on-collapse">
-      <h1 class="text-3xl font-extrabold bg-gradient-to-r from-pink-500 to-teal-400 bg-clip-text text-transparent text-center mb-7"><i class="fas fa-table-tennis-paddle-ball mr-2"></i>PadelMap BA</h1>
-
+      <h1 class="text-4xl font-extrabold bg-gradient-to-r from-pink-500 to-teal-400 bg-clip-text text-transparent text-center mb-8"><i class="fas fa-table-tennis-paddle-ball mr-2"></i>PadelMap BA</h1>
       <div class="mb-6">
         <label class="block text-sm font-semibold text-gray-600 mb-1"><i class="fas fa-globe-americas mr-1"></i>Zona</label>
-        <select id="zoneSelect" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" onchange="applyFilters()"></select>
+        <select id="zoneSelect" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-85 focus:bg-opacity-100 focus:ring-2 focus:ring-accent focus:outline-none" onchange="onZoneChange()"></select>
       </div>
-
-      <div class="mb-6">
+      <div class="mb-7">
         <label class="block text-sm font-semibold text-gray-600 mb-1"><i class="fas fa-location-dot mr-1"></i>Localidad</label>
-        <input id="localitySearch" list="localities" placeholder="Buscar localidad…" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-80 focus:bg-opacity-95 focus:ring-2 focus:ring-accent focus:outline-none" oninput="applyFilters()">
+        <input id="localitySearch" list="localities" placeholder="Buscar localidad…" class="w-full py-3 px-4 rounded-lg bg-white bg-opacity-85 focus:bg-opacity-100 focus:ring-2 focus:ring-accent focus:outline-none" oninput="applyFilters()">
         <datalist id="localities"></datalist>
       </div>
-
       <button class="btn btn-primary mb-3" onclick="getCurrentLocation()"><i class="fas fa-location-crosshairs"></i>Mi ubicación</button>
-      <button class="btn btn-danger mb-8" onclick="resetFilters()"><i class="fas fa-arrows-rotate"></i>Limpiar filtros</button>
-
-      <div class="text-center bg-white bg-opacity-75 rounded-xl py-4 mb-7 shadow-sm">
-        <span id="count" class="text-4xl font-extrabold text-accent">0</span>
+      <button class="btn btn-danger mb-9" onclick="resetFilters()"><i class="fas fa-arrows-rotate"></i>Limpiar filtros</button>
+      <div class="text-center bg-white bg-opacity-80 rounded-xl py-4 mb-8">
+        <span id="count" class="text-5xl font-extrabold text-accent">0</span>
         <p class="text-sm text-gray-600 font-medium">Canchas disponibles</p>
       </div>
-
       <section id="nearestBox" class="hidden">
         <h3 class="text-gray-700 font-semibold mb-3 flex items-center"><i class="fas fa-route mr-2"></i>Canchas más cercanas</h3>
         <div id="nearest" class="space-y-3"></div>
@@ -82,7 +72,6 @@
     </div>
   </aside>
 
-  <!-- ▀▀ Map ▀▀ -->
   <div class="map-wrapper">
     <button class="mobile-btn md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <div id="map"></div>
@@ -90,166 +79,49 @@
   </div>
 </div>
 
-<!-- Overlay & Card -->
 <div id="overlay" onclick="closeCard()"></div>
 <article id="card"></article>
 
-<!-- External JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
 <script>
-/************* CONFIG *************/
-const EXCEL_URL = 'PadelGeo.xlsx';
-const DANGER_CLR = '#e53935';
-const ZONE_COLORS = { 'CABA':'#ff6b6b','GBA Norte':'#4ecdc4','GBA Sur':'#ffd166','GBA Oeste':'#118ab2' };
-
-/************* STATE *************/
-let courts=[], filtered=[];
-let map, clusters, userLoc=null, userMarker=null;
-
-/************* HELPERS *************/
-const canon=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
-const pick=(row,...aliases)=>Object.keys(row).find(k=>aliases.some(a=>canon(k).includes(canon(a))))?row[Object.keys(row).find(k=>aliases.some(a=>canon(k).includes(canon(a))))]:'';
-const firstVal=row=>Object.values(row)[0];
-const haversine=(a,b)=>{const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180;const dLng=(b.lng-a.lng)*Math.PI/180;const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));};
-
-/************* LOAD EXCEL *************/
-async function loadExcel(){
-  const res=await fetch(EXCEL_URL);
-  if(!res.ok) throw new Error('No se pudo descargar el Excel');
-  const wb=XLSX.read(await res.arrayBuffer(),{type:'array'});
-  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
-  return rows.map(r=>{
-    let loc=pick(r,'localidad','ciudad','poblacion')||'N/D';
-    let derivedZone='';
-    const m=loc.match(/\(([^)]+)\)/);
-    if(m){derivedZone=m[1].trim();loc=loc.replace(/\s*\([^)]*\)/,'').trim();}
-    const zone=pick(r,'zona','region','partido','area')||derivedZone||'Sin zona';
-    return{
-      name:pick(r,'nombre','cancha','complejo','club')||firstVal(r)||'N/D',
-      address:pick(r,'direccion','calle','domicilio')||'N/D',
-      locality:loc,
-      zone,
-      phone:pick(r,'telefono','tel'),
-      instagram:pick(r,'instagram','ig'),
-      instagramUrl:pick(r,'instagramurl','linkig','urlinstagram'),
-      reservation:pick(r,'linkreserva','reserva','booking'),
-      lat:parseFloat(pick(r,'latitud','lat','latitude')),
-      lng:parseFloat(pick(r,'longitud','lon','lng','longitude')),
-      image:pick(r,'imagen','foto','image')
-    };
-  }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
-}
-
-/************* MAP *************/
-const pinIcon=color=>L.divIcon({html:`<i class='fas fa-map-marker-alt' style='color:${color};font-size:28px;text-shadow:0 0 3px rgba(0,0,0,.4)'></i>`,className:'',iconSize:[28,28],iconAnchor:[14,28]});
-
-function initMap(){
-  map=L.map('map',{zoomControl:false}).setView([-34.6037,-58.3816],11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
-  L.control.zoom({position:'bottomright'}).addTo(map);
-  clusters=L.markerClusterGroup({disableClusteringAtZoom:15});
-  map.addLayer(clusters);
-  renderMarkers();
-}
-
-function renderMarkers(){
-  clusters.clearLayers();
-  filtered.forEach(c=>{
-    const marker=L.marker([c.lat,c.lng],{icon:pinIcon(ZONE_COLORS[c.zone]||'#555')});
-    marker.bindTooltip(`<strong>${c.name}</strong><br><span class='text-xs'>${c.locality}</span>`,{direction:'top',offset:[0,-22]});
-    marker.on('click',()=>openCard(c));
-    clusters.addLayer(marker);
-  });
-  document.getElementById('count').textContent=filtered.length;
-  if(userLoc) updateNearest();
-}
-
-/************* FILTERS *************/
-function buildFilters(){
-  const zones=[...new Set(courts.map(c=>c.zone).filter(z=>z&&z!=='Sin zona'))].sort();
-  zoneSelect.innerHTML='<option value="">Todas las zonas</option>'+zones.map(z=>`<option value="${z}">${z}</option>`).join('');
-  const locs=[...new Set(courts.map(c=>c.locality))].sort();
-  document.getElementById('localities').innerHTML=locs.map(l=>`<option value="${l}">`).join('');
-}
-function applyFilters(){
-  const z=zoneSelect.value;
-  const loc=localitySearch.value.trim().toLowerCase();
-  filtered=courts.filter(c=>(!z||c.zone===z)&&(!loc||c.locality.toLowerCase().includes(loc)));
-  renderMarkers();
-}
-function resetFilters(){zoneSelect.value='';localitySearch.value='';filtered=[...courts];renderMarkers();}
-
-/************* USER LOCATION *************/
-function getCurrentLocation(){
-  if(!navigator.geolocation) return alert('Geolocalización no soportada');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    userLoc={lat:pos.coords.latitude,lng:pos.coords.longitude};
-    showUserMarker();
-    map.setView([userLoc.lat,userLoc.lng],13);
-    updateNearest();
-  },err=>alert('Error: '+err.message));
-}
-function showUserMarker(){
-  if(userMarker) map.removeLayer(userMarker);
-  userMarker=L.marker([userLoc.lat,userLoc.lng],{icon:pinIcon(DANGER_CLR)}).addTo(map).bindPopup('Tu ubicación').openPopup();
-}
-
-function updateNearest(){
-  if(!userLoc)return;
-  const list=filtered.map(c=>({...c,d:haversine(userLoc,c)})).sort((a,b)=>a.d-b.d).slice(0,3);
-  const container=document.getElementById('nearest');
-  container.innerHTML=list.map(c=>`<div class='bg-white bg-opacity-70 rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-opacity-90' onclick='map.setView([${c.lat},${c.lng}],15);openCard(${JSON.stringify(c).replace(/"/g,'&quot;')})'>
-    <div>
-      <p class='font-semibold text-gray-800 text-sm'>${c.name}</p>
-      <p class='text-gray-600 text-xs'>${c.locality}</p>
-    </div>
-    <span class='text-accent font-medium text-xs'>${c.d.toFixed(2)} km</span>
-  </div>`).join('');
-  document.getElementById('nearestBox').classList.toggle('hidden',list.length===0);
-}
-
-/************* CARD *************/
-function chip(txt){return`<span class='inline-block px-2 py-0.5 text-xs font-semibold bg-accent text-white rounded-full'>${txt}</span>`;}
-function openCard(c){
-  const overlay=document.getElementById('overlay');
-  const card=document.getElementById('card');
-  overlay.classList.add('show');
-  card.classList.add('show');
-  const phone=c.phone?`<li class='flex gap-3'><i class='fas fa-phone text-accent mt-0.5'></i><span class='font-medium text-gray-600'>Teléfono:</span><a href='tel:${c.phone}' class='text-primary-600 underline'>${c.phone}</a></li>`:'';
-  const insta=c.instagram?`<li class='flex gap-3'><i class='fab fa-instagram text-accent mt-0.5'></i><span class='font-medium text-gray-600'>Instagram:</span><a href='${c.instagramUrl||'#'}' target='_blank' class='text-primary-600 underline'>${c.instagram}</a></li>`:'';
-  const reserva=c.reservation?`<li class='flex gap-3'><i class='fas fa-calendar-check text-accent mt-0.5'></i><span class='font-medium text-gray-600'>Reservas:</span><a href='${c.reservation}' target='_blank' class='text-primary-600 font-semibold underline'>Link</a></li>`:'';
-  const distTag=userLoc?`<li class='flex gap-3'><i class='fas fa-route text-accent mt-0.5'></i><span class='font-medium text-gray-600'>Distancia:</span><span>${haversine(userLoc,c).toFixed(2)} km</span></li>`:'';
-  card.innerHTML=`
-    <button class='absolute top-4 right-4 w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center' onclick='closeCard()'><i class='fas fa-times'></i></button>
-    <div class='mb-5 text-center'>
-      ${chip(c.zone)}
-      <h2 class='text-2xl font-bold mt-2 mb-1 text-gray-800'>${c.name}</h2>
-      <p class='text-sm text-gray-500 font-medium'>${c.locality}</p>
-    </div>
-    <ul class='space-y-3 text-sm mb-5'>
-      <li class='flex gap-3'><i class='fas fa-map-marker-alt text-accent mt-0.5'></i><span class='font-medium text-gray-600'>Dirección:</span><span>${c.address}</span></li>
-      ${phone}${insta}${reserva}${distTag}
-    </ul>
-    ${c.image?`<img src='${c.image}' class='rounded-xl w-full object-cover max-h-64'>`:''}`;
-}
-function closeCard(){document.getElementById('overlay').classList.remove('show');document.getElementById('card').classList.remove('show');}
-
-/************* SIDEBAR TOGGLE *************/
+// CONFIG
+const EXCEL_URL='PadelGeo.xlsx';
+const DANGER='#e53935';
+const ZCOLORS={'CABA':'#ff6b6b','GBA Norte':'#4ecdc4','GBA Sur':'#ffd166','GBA Oeste':'#118ab2'};
+// STATE
+let courts=[],filtered=[];let map,clusters,userLoc=null,userMarker=null;const zoneLocalityMap=new Map();
+// HELPERS
+const canon=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+const pick=(row,...a)=>{const k=Object.keys(row).find(key=>a.some(v=>canon(key).includes(canon(v))));return k?row[k]:''};
+const first=r=>Object.values(r)[0];
+const dist=(a,b)=>{const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180;const dLng=(b.lng-a.lng)*Math.PI/180;const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));};
+// EXCEL
+async function loadExcel(){const res=await fetch(EXCEL_URL);if(!res.ok)throw new Error('No Excel');const wb=XLSX.read(await res.arrayBuffer(),{type:'array'});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});return rows.map(r=>{let loc=pick(r,'localidad','ciudad')||'N/D';let z='';const m=loc.match(/\(([^)]+)\)/);if(m){z=m[1].trim();loc=loc.replace(/\s*\([^)]*\)/,'').trim();}const zone=pick(r,'zona','partido')||z||'Sin zona';return{name:pick(r,'nombre','cancha','club')||first(r)||'N/D',address:pick(r,'direccion','calle')||'N/D',locality:loc,zone,phone:pick(r,'telefono'),instagram:pick(r,'instagram'),instagramUrl:pick(r,'instagramurl','linkig'),reservation:pick(r,'linkreserva','reserva'),lat:+pick(r,'latitud','lat'),lng:+pick(r,'longitud','lon'),image:pick(r,'imagen','foto')}}).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));}
+// MAP
+const icon=c=>L.divIcon({html:`<i class='fas fa-map-pin' style='color:${c};font-size:30px;text-shadow:0 0 3px rgba(0,0,0,.5)'></i>`,iconSize:[30,30],iconAnchor:[15,30]});
+function initMap(){map=L.map('map',{zoomControl:false}).setView([-34.6037,-58.3816],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);L.control.zoom({position:'bottomright'}).addTo(map);clusters=L.markerClusterGroup({disableClusteringAtZoom:15});map.addLayer(clusters);renderMarkers();}
+function renderMarkers(){clusters.clearLayers();filtered.forEach(c=>{const m=L.marker([c.lat,c.lng],{icon:icon(ZCOLORS[c.zone]||'#666')});m.bindTooltip(`<strong>${c.name}</strong><br><span class='text-xs'>${c.locality}</span>`,{direction:'top',offset:[0,-24]});m.on('click',()=>openCard(c));clusters.addLayer(m);});count.textContent=filtered.length;if(userLoc)updateNearest();}
+// FILTERS
+function buildMaps(){zoneLocalityMap.clear();courts.forEach(c=>{if(!zoneLocalityMap.has(c.zone))zoneLocalityMap.set(c.zone,new Set());zoneLocalityMap.get(c.zone).add(c.locality);});populateZone();populateLocalities();}
+function populateZone(){zoneSelect.innerHTML='<option value="">Todas las zonas</option>'+[...zoneLocalityMap.keys()].filter(z=>z!=='Sin zona').sort().map(z=>`<option value="${z}">${z}</option>`).join('');}
+function populateLocalities(z=""){const locSet=z?zoneLocalityMap.get(z)||new Set():new Set(courts.map(c=>c.locality));localities.innerHTML=[...locSet].sort().map(l=>`<option value="${l}">`).join('');}
+function onZoneChange(){populateLocalities(zoneSelect.value);applyFilters();}
+function applyFilters(){const z=zoneSelect.value.trim(),loc=localitySearch.value.trim().toLowerCase();filtered=courts.filter(c=>(!z||c.zone===z)&&(!loc||c.locality.toLowerCase().includes(loc)));renderMarkers();}
+function resetFilters(){zoneSelect.value='';localitySearch.value='';populateLocalities();filtered=[...courts];renderMarkers();nearestBox.classList.add('hidden');}
+// USER LOCATION
+function getCurrentLocation(){if(!navigator.geolocation)return alert('Geolocalización no soportada');navigator.geolocation.getCurrentPosition(p=>{userLoc={lat:p.coords.latitude,lng:p.coords.longitude};showUser();map.setView([userLoc.lat,userLoc.lng],13);updateNearest();});}
+function showUser(){if(userMarker)map.removeLayer(userMarker);userMarker=L.marker([userLoc.lat,userLoc.lng],{icon:icon(DANGER)}).addTo(map).bindPopup('Tu ubicación').openPopup();}
+function updateNearest(){if(!userLoc)return;const list=filtered.map(c=>({...c,d:dist(userLoc,c)})).sort((a,b)=>a.d-b.d).slice(0,3);nearest.innerHTML=list.map(c=>`<div class='bg-white bg-opacity-80 rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-opacity-90' onclick='map.setView([${c.lat},${c.lng}],15);openCard(${JSON.stringify(c).replace(/"/g,'&quot;')})'><div><p class='font-semibold text-gray-800 text-sm'>${c.name}</p><p class='text-gray-600 text-xs'>${c.locality}</p></div><span class='text-accent font-medium text-xs'>${c.d.toFixed(2)} km</span></div>`).join('');nearestBox.classList.toggle('hidden',list.length===0);}
+// CARD
+function chip(t){return`<span class='inline-block px-2 py-0.5 text-xs font-semibold bg-accent text-white rounded-full'>${t}</span>`;}
+function openCard(c){overlay.classList.add('show');card.classList.add('show');card.innerHTML=`<button class='absolute top-4 right-4 w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center hover:bg-red-100' onclick='closeCard()'><i class='fas fa-times'></i></button><div class='mb-6 text-center'>${chip(c.zone)}<h2 class='text-2xl font-extrabold mt-3 mb-1 text-gray-800'>${c.name}</h2><p class='text-gray-500 font-medium'>${c.locality}</p></div><ul class='space-y-4 text-base text-gray-700'><li class='flex gap-3'><i class='fas fa-location-dot text-accent mt-1'></i><div><span class='font-semibold'>Dirección:</span> ${c.address}</div></li>${c.phone?`<li class='flex gap-3'><i class='fas fa-phone text-accent mt-1'></i><div><span class='font-semibold'>Teléfono:</span> <a href='tel:${c.phone}' class='text-primary-600 underline'>${c.phone}</a></div></li>`:''}${c.instagram?`<li class='flex gap-3'><i class='fab fa-instagram text-accent mt-1'></i><div><span class='font-semibold'>Instagram:</span> <a href='${c.instagramUrl||'#'}' target='_blank' class='text-primary-600 underline'>${c.instagram}</a></div></li>`:''}${c.reservation?`<li class='flex gap-3'><i class='fas fa-calendar-check text-accent mt-1'></i><div><span class='font-semibold'>Reservas:</span> <a href='${c.reservation}' target='_blank' class='text-primary-600 underline'>Link</a></div></li>`:''}${userLoc?`<li class='flex gap-3'><i class='fas fa-route text-accent mt-1'></i><div><span class='font-semibold'>Distancia:</span> ${dist(userLoc,c).toFixed(2)} km</div></li>`:''}</ul>${c.image?`<img src='${c.image}' alt='${c.name}' class='rounded-xl mt-6 w-full object-cover max-h-64'>`:''}`;}
+function closeCard(){overlay.classList.remove('show');card.classList.remove('show');}
+// SIDEBAR
 function toggleSidebar(){const sb=document.getElementById('sidebar');if(innerWidth<=768){sb.classList.toggle('show');}else{sb.classList.toggle('collapsed');}}
 window.addEventListener('resize',()=>{if(innerWidth>768)document.getElementById('sidebar').classList.remove('show');});
-
-/************* INIT *************/
-(async()=>{
-  try{
-    courts=await loadExcel();
-    filtered=[...courts];
-    buildFilters();
-    initMap();
-  }catch(e){console.error(e);alert('Error al cargar las canchas');}
-  finally{document.getElementById('loader').style.display='none';}
-})();
+// INIT
+(async()=>{try{courts=await loadExcel();filtered=[...courts];buildMaps();initMap();}catch(e){alert('Error al cargar canchas');console.error(e);}finally{document.getElementById('loader').style.display='none';}})();
 </script>
 </body>
 </html>
